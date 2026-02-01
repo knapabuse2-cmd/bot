@@ -1,0 +1,1 @@
+"""Comment bot application layer."""

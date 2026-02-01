@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: outreach-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_DATABASE:-outreach}
+    command: postgres -c max_connections=500 -c shared_buffers=256MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # ports:
+    #   - "5432:5432"  # Uncomment for local development only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: outreach-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    # ports:
+    #   - "6379:6379"  # Uncomment for local development only
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Admin Bot
+  admin-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: outreach-admin-bot
+    command: python -m src.presentation.admin_bot.main
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./sessions:/app/sessions
+      - ./src:/app/src:ro  # Dev mode: mount source code (read-only)
+    restart: unless-stopped
+
+  # Worker Manager
+  worker-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: outreach-worker-manager
+    command: python -m src.workers.main
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./sessions:/app/sessions
+      - ./src:/app/src:ro  # Dev mode: mount source code (read-only)
+    restart: unless-stopped
+
+  # API (optional)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: outreach-api
+    command: uvicorn src.presentation.api.main:app --host 0.0.0.0 --port 8000
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    name: outreach-network

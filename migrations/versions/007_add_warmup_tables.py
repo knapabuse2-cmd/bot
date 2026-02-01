@@ -25,7 +25,7 @@ def upgrade() -> None:
     # 1. Create interest_categories table
     op.create_table(
         'interest_categories',
-        sa.Column('id', sa.UUID(), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
         sa.Column('name', sa.String(100), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('keywords', sa.JSON(), nullable=False, server_default='[]'),
@@ -37,10 +37,10 @@ def upgrade() -> None:
     # 2. Create warmup_channels table
     op.create_table(
         'warmup_channels',
-        sa.Column('id', sa.UUID(), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
         sa.Column('username', sa.String(255), nullable=False),
         sa.Column('title', sa.String(255), nullable=True),
-        sa.Column('category_id', sa.UUID(), nullable=True),
+        sa.Column('category_id', sa.String(36), nullable=True),
         sa.Column('language', sa.String(10), nullable=False, server_default='en'),
         sa.Column('subscriber_count', sa.Integer(), nullable=True),
         sa.Column('last_post_at', sa.DateTime(timezone=True), nullable=True),
@@ -55,10 +55,10 @@ def upgrade() -> None:
     # 3. Create warmup_groups table
     op.create_table(
         'warmup_groups',
-        sa.Column('id', sa.UUID(), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
         sa.Column('username', sa.String(255), nullable=False),
         sa.Column('title', sa.String(255), nullable=True),
-        sa.Column('category_id', sa.UUID(), nullable=True),
+        sa.Column('category_id', sa.String(36), nullable=True),
         sa.Column('language', sa.String(10), nullable=False, server_default='en'),
         sa.Column('can_write', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('member_count', sa.Integer(), nullable=True),
@@ -73,7 +73,7 @@ def upgrade() -> None:
     # 4. Create warmup_profiles table
     op.create_table(
         'warmup_profiles',
-        sa.Column('id', sa.UUID(), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
         sa.Column('name', sa.String(255), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('total_days', sa.Integer(), nullable=False, server_default='21'),
@@ -92,9 +92,9 @@ def upgrade() -> None:
     # 5. Create account_warmups table
     op.create_table(
         'account_warmups',
-        sa.Column('id', sa.UUID(), nullable=False),
-        sa.Column('account_id', sa.UUID(), nullable=False),
-        sa.Column('profile_id', sa.UUID(), nullable=True),
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('account_id', sa.String(36), nullable=False),
+        sa.Column('profile_id', sa.String(36), nullable=True),
         sa.Column('stage', sa.Integer(), nullable=False, server_default='1'),
         sa.Column('status', sa.String(50), nullable=False, server_default='pending'),
         sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
@@ -124,8 +124,8 @@ def upgrade() -> None:
     # 6. Create account_personas table
     op.create_table(
         'account_personas',
-        sa.Column('id', sa.UUID(), nullable=False),
-        sa.Column('account_id', sa.UUID(), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('account_id', sa.String(36), nullable=False),
         sa.Column('interests', sa.JSON(), nullable=False, server_default='[]'),
         sa.Column('activity_pattern', sa.String(50), nullable=False, server_default='office_hours'),
         sa.Column('timezone', sa.String(50), nullable=False, server_default='UTC'),
@@ -145,10 +145,10 @@ def upgrade() -> None:
     # 7. Create account_subscriptions table
     op.create_table(
         'account_subscriptions',
-        sa.Column('id', sa.UUID(), nullable=False),
-        sa.Column('warmup_id', sa.UUID(), nullable=False),
-        sa.Column('channel_id', sa.UUID(), nullable=True),
-        sa.Column('group_id', sa.UUID(), nullable=True),
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('warmup_id', sa.String(36), nullable=False),
+        sa.Column('channel_id', sa.String(36), nullable=True),
+        sa.Column('group_id', sa.String(36), nullable=True),
         sa.Column('joined_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('left_at', sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(['channel_id'], ['warmup_channels.id'], ondelete='CASCADE'),
@@ -162,8 +162,8 @@ def upgrade() -> None:
     # 8. Create warmup_activity_logs table
     op.create_table(
         'warmup_activity_logs',
-        sa.Column('id', sa.UUID(), nullable=False),
-        sa.Column('account_id', sa.UUID(), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('account_id', sa.String(36), nullable=False),
         sa.Column('activity_type', sa.String(50), nullable=False),
         sa.Column('target', sa.String(255), nullable=True),
         sa.Column('details', sa.JSON(), nullable=True),

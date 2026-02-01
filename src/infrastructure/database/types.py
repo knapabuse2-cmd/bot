@@ -20,18 +20,17 @@ from sqlalchemy.types import CHAR, TypeDecorator
 class GUID(TypeDecorator):
     """Platform-independent GUID type.
 
-    - PostgreSQL: uses UUID
-    - Other DBs (e.g. SQLite): stores as CHAR(36)
+    Stores UUIDs as CHAR(36) strings on all databases for consistency
+    with existing migrations that use String(36).
 
     Returns/accepts Python ``uuid.UUID``.
     """
 
-    impl = CHAR
+    impl = CHAR(36)
     cache_ok = True
 
     def load_dialect_impl(self, dialect):  # type: ignore[override]
-        if dialect.name == "postgresql":
-            return dialect.type_descriptor(PG_UUID(as_uuid=True))
+        # Always use CHAR(36) for consistency with migrations
         return dialect.type_descriptor(CHAR(36))
 
     def process_bind_param(self, value, dialect):  # type: ignore[override]
@@ -41,10 +40,6 @@ class GUID(TypeDecorator):
         if not isinstance(value, uuid.UUID):
             value = uuid.UUID(str(value))
 
-        if dialect.name == "postgresql":
-            return value
-
-        # SQLite etc.
         return str(value)
 
     def process_result_value(self, value, dialect):  # type: ignore[override]

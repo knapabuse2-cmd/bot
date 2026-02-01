@@ -9,7 +9,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -25,7 +24,7 @@ def upgrade() -> None:
     # 1. Create interest_categories table
     op.create_table(
         'interest_categories',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
         sa.Column('name', sa.String(100), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('keywords', sa.JSON(), nullable=False, server_default='[]'),
@@ -37,10 +36,10 @@ def upgrade() -> None:
     # 2. Create warmup_channels table
     op.create_table(
         'warmup_channels',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
         sa.Column('username', sa.String(255), nullable=False),
         sa.Column('title', sa.String(255), nullable=True),
-        sa.Column('category_id', postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column('category_id', sa.String(36), nullable=True),
         sa.Column('language', sa.String(10), nullable=False, server_default='en'),
         sa.Column('subscriber_count', sa.Integer(), nullable=True),
         sa.Column('last_post_at', sa.DateTime(timezone=True), nullable=True),
@@ -55,10 +54,10 @@ def upgrade() -> None:
     # 3. Create warmup_groups table
     op.create_table(
         'warmup_groups',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
         sa.Column('username', sa.String(255), nullable=False),
         sa.Column('title', sa.String(255), nullable=True),
-        sa.Column('category_id', postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column('category_id', sa.String(36), nullable=True),
         sa.Column('language', sa.String(10), nullable=False, server_default='en'),
         sa.Column('can_write', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('member_count', sa.Integer(), nullable=True),
@@ -73,7 +72,7 @@ def upgrade() -> None:
     # 4. Create warmup_profiles table
     op.create_table(
         'warmup_profiles',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
         sa.Column('name', sa.String(255), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('total_days', sa.Integer(), nullable=False, server_default='21'),
@@ -89,12 +88,42 @@ def upgrade() -> None:
         sa.UniqueConstraint('name')
     )
 
-    # 5. Create account_warmups table
+    # 5. Create proxy_groups table
+    op.create_table(
+        'proxy_groups',
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('name', sa.String(255), nullable=False),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('country_code', sa.String(10), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('name')
+    )
+
+    # 6. Create account_groups table
+    op.create_table(
+        'account_groups',
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('name', sa.String(255), nullable=False),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('default_warmup_profile_id', sa.String(36), nullable=True),
+        sa.Column('default_proxy_group_id', sa.String(36), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('version', sa.Integer(), nullable=False, server_default='0'),
+        sa.ForeignKeyConstraint(['default_warmup_profile_id'], ['warmup_profiles.id'], ondelete='SET NULL'),
+        sa.ForeignKeyConstraint(['default_proxy_group_id'], ['proxy_groups.id'], ondelete='SET NULL'),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('name')
+    )
+
+    # 7. Create account_warmups table
     op.create_table(
         'account_warmups',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('account_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('profile_id', postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('account_id', sa.String(36), nullable=False),
+        sa.Column('profile_id', sa.String(36), nullable=True),
         sa.Column('stage', sa.Integer(), nullable=False, server_default='1'),
         sa.Column('status', sa.String(50), nullable=False, server_default='pending'),
         sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
@@ -121,11 +150,11 @@ def upgrade() -> None:
         sa.UniqueConstraint('account_id')
     )
 
-    # 6. Create account_personas table
+    # 8. Create account_personas table
     op.create_table(
         'account_personas',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('account_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('account_id', sa.String(36), nullable=False),
         sa.Column('interests', sa.JSON(), nullable=False, server_default='[]'),
         sa.Column('activity_pattern', sa.String(50), nullable=False, server_default='office_hours'),
         sa.Column('timezone', sa.String(50), nullable=False, server_default='UTC'),
@@ -142,13 +171,13 @@ def upgrade() -> None:
         sa.UniqueConstraint('account_id')
     )
 
-    # 7. Create account_subscriptions table
+    # 9. Create account_subscriptions table
     op.create_table(
         'account_subscriptions',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('warmup_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('channel_id', postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column('group_id', postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('warmup_id', sa.String(36), nullable=False),
+        sa.Column('channel_id', sa.String(36), nullable=True),
+        sa.Column('group_id', sa.String(36), nullable=True),
         sa.Column('joined_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('left_at', sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(['channel_id'], ['warmup_channels.id'], ondelete='CASCADE'),
@@ -159,11 +188,11 @@ def upgrade() -> None:
         sa.UniqueConstraint('warmup_id', 'group_id', name='uq_account_group_subscription')
     )
 
-    # 8. Create warmup_activity_logs table
+    # 10. Create warmup_activity_logs table
     op.create_table(
         'warmup_activity_logs',
-        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('account_id', postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('account_id', sa.String(36), nullable=False),
         sa.Column('activity_type', sa.String(50), nullable=False),
         sa.Column('target', sa.String(255), nullable=True),
         sa.Column('details', sa.JSON(), nullable=True),
@@ -172,6 +201,41 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(['account_id'], ['accounts.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
+    )
+
+    # 11. Create account_group_memberships table
+    op.create_table(
+        'account_group_memberships',
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('account_id', sa.String(36), nullable=False),
+        sa.Column('group_id', sa.String(36), nullable=False),
+        sa.Column('added_at', sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(['account_id'], ['accounts.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['group_id'], ['account_groups.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('account_id', 'group_id', name='uq_account_group_membership')
+    )
+
+    # 12. Create proxy_group_memberships table
+    op.create_table(
+        'proxy_group_memberships',
+        sa.Column('id', sa.String(36), nullable=False),
+        sa.Column('proxy_id', sa.String(36), nullable=False),
+        sa.Column('group_id', sa.String(36), nullable=False),
+        sa.Column('added_at', sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(['proxy_id'], ['proxies.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['group_id'], ['proxy_groups.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('proxy_id', 'group_id', name='uq_proxy_group_membership')
+    )
+
+    # Add group_id column to accounts table
+    op.add_column('accounts', sa.Column('group_id', sa.String(36), nullable=True))
+    op.create_foreign_key(
+        'fk_accounts_group_id',
+        'accounts', 'account_groups',
+        ['group_id'], ['id'],
+        ondelete='SET NULL'
     )
 
     # Create indexes
@@ -185,11 +249,19 @@ def downgrade() -> None:
     op.drop_index('ix_warmup_activity_logs_created_at', 'warmup_activity_logs')
     op.drop_index('ix_warmup_activity_logs_account_id', 'warmup_activity_logs')
 
+    # Drop group_id from accounts
+    op.drop_constraint('fk_accounts_group_id', 'accounts', type_='foreignkey')
+    op.drop_column('accounts', 'group_id')
+
     # Drop tables in reverse order (respect foreign keys)
+    op.drop_table('proxy_group_memberships')
+    op.drop_table('account_group_memberships')
     op.drop_table('warmup_activity_logs')
     op.drop_table('account_subscriptions')
     op.drop_table('account_personas')
     op.drop_table('account_warmups')
+    op.drop_table('account_groups')
+    op.drop_table('proxy_groups')
     op.drop_table('warmup_profiles')
     op.drop_table('warmup_groups')
     op.drop_table('warmup_channels')

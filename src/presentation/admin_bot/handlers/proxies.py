@@ -15,6 +15,7 @@ from ..keyboards import (
     get_cancel_kb,
     get_main_menu_kb,
     get_back_kb,
+    get_confirm_kb,
 )
 from ..states import ProxyStates
 
@@ -236,6 +237,55 @@ async def check_proxies(callback: CallbackQuery, session: AsyncSession) -> None:
         f"<i>Статусы прокси обновлены.</i>",
         reply_markup=get_proxies_menu_kb(),
     )
+
+
+@router.callback_query(F.data == "proxies:delete_all")
+async def delete_all_proxies_confirm(callback: CallbackQuery, session: AsyncSession) -> None:
+    """Show confirmation for deleting all proxies."""
+    repo = PostgresProxyRepository(session)
+    proxies_with_assignment = await repo.list_all_with_assignment(limit=1000)
+
+    total = len(proxies_with_assignment)
+    assigned = sum(1 for _, acc_id in proxies_with_assignment if acc_id)
+    unassigned = total - assigned
+
+    if total == 0:
+        await callback.message.edit_text(
+            "🌐 <b>Удаление прокси</b>\n\n"
+            "Список прокси пуст, нечего удалять.",
+            reply_markup=get_proxies_menu_kb(),
+        )
+        await callback.answer()
+        return
+
+    await callback.message.edit_text(
+        f"🗑 <b>Удаление всех прокси</b>\n\n"
+        f"Всего прокси: {total}\n"
+        f"• Назначено аккаунтам: {assigned} (не будут удалены)\n"
+        f"• Свободных: {unassigned} (будут удалены)\n\n"
+        f"<b>Вы уверены, что хотите удалить {unassigned} свободных прокси?</b>",
+        reply_markup=get_confirm_kb(
+            confirm_callback="proxies:delete_all:confirm",
+            cancel_callback="proxies:menu",
+        ),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "proxies:delete_all:confirm")
+async def delete_all_proxies_execute(callback: CallbackQuery, session: AsyncSession) -> None:
+    """Execute deletion of all unassigned proxies."""
+    repo = PostgresProxyRepository(session)
+
+    deleted_count = await repo.delete_all_unassigned()
+
+    await callback.message.edit_text(
+        f"✅ <b>Прокси удалены!</b>\n\n"
+        f"Удалено свободных прокси: {deleted_count}\n\n"
+        f"<i>Прокси, назначенные аккаунтам, сохранены.</i>",
+        reply_markup=get_proxies_menu_kb(),
+    )
+    await callback.answer()
 
 
 def parse_proxy_url(url: str) -> Proxy:

@@ -142,12 +142,8 @@ class WorkerManager:
             interval_seconds=3600,  # Check every hour
             run_immediately=False,
         )
-        self._scheduler.add_task(
-            name="proxy_health_check",
-            func=self._check_proxy_health,
-            interval_seconds=300,  # Every 5 minutes
-            run_immediately=False,
-        )
+        # NOTE: Automatic proxy health check removed to save traffic
+        # Proxies are now checked on-demand when account interacts with Telegram
 
         await self._scheduler.start()
 
@@ -650,38 +646,6 @@ class WorkerManager:
         except Exception as e:
             logger.error(f"Error resetting warmup daily counters: {e}")
 
-    async def _check_proxy_health(self) -> None:
-        """Periodically check health of all proxies and alert on failures."""
-        try:
-            checker = get_proxy_checker()
-            result = await checker.check_all()
-
-            failed = result.get("failed", 0)
-            total = result.get("total", 0)
-
-            if failed > 0:
-                logger.warning(
-                    "Proxy health check found failures",
-                    total=total,
-                    passed=result.get("passed", 0),
-                    failed=failed,
-                )
-
-                # Alert admin about failed proxies
-                try:
-                    alert_service = get_alert_service()
-                    await alert_service.send_alert(
-                        f"⚠️ Proxy health check: {failed}/{total} proxies failed"
-                    )
-                except Exception as alert_err:
-                    logger.error("Failed to send proxy alert", error=str(alert_err))
-            else:
-                logger.debug(
-                    "Proxy health check passed",
-                    total=total,
-                )
-        except Exception as e:
-            logger.error("Error in proxy health check", error=str(e))
 
 
 # Singleton manager

@@ -5,7 +5,7 @@ Proxy repository implementation.
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, delete, func, select
 
 from src.application.interfaces.repository import ProxyRepository
 from src.domain.entities import Proxy, ProxyStatus
@@ -170,3 +170,30 @@ class PostgresProxyRepository(BaseRepository[ProxyModel, Proxy], ProxyRepository
         rows = result.all()
 
         return [(self._to_entity(row.ProxyModel), row.account_id) for row in rows]
+
+    async def delete_all_unassigned(self) -> int:
+        """Delete all proxies that are not assigned to any account.
+
+        Returns:
+            Number of deleted proxies
+        """
+        from src.infrastructure.database.models import AccountModel
+
+        # Get IDs of proxies assigned to accounts
+        assigned_subq = (
+            select(AccountModel.proxy_id)
+            .where(AccountModel.proxy_id.isnot(None))
+            .scalar_subquery()
+        )
+
+        # Delete all unassigned proxies
+        stmt = (
+            delete(ProxyModel)
+            .where(ProxyModel.id.notin_(assigned_subq))
+            .returning(ProxyModel.id)
+        )
+        result = await self.session.execute(stmt)
+        deleted_ids = result.scalars().all()
+        await self.session.commit()
+
+        return len(deleted_ids)

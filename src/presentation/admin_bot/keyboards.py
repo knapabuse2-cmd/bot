@@ -514,6 +514,9 @@ def get_proxies_menu_kb() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🔄 Проверить все", callback_data="proxies:check"),
     )
     builder.row(
+        InlineKeyboardButton(text="🗑 Удалить все прокси", callback_data="proxies:delete_all"),
+    )
+    builder.row(
         InlineKeyboardButton(text="◀️ Главное меню", callback_data="main_menu"),
     )
     return builder.as_markup()
